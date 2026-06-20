@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>esp32</title>
+</head>
+<body>
+    <h2>Primer s spletnim vtičnikom WebSocket na portu 81</h2>
+    <button onclick='prizgi1()'>Prižgi LED</button>
+    <button onclick='ugasni1()'>Ugasni LED</button>
+
+    <script>
+        
+        let povezava = new WebSocket('ws://' + location.host + ':81/');
+
+        function prizgi1(){
+            povezava.send("1");
+        }
+
+        function ugasni1(){
+            povezava.send("0");
+        }
+
+    </script>
+</body>
+</html>

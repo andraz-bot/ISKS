@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graf</title>
+</head>
+<body>
+    Primer z grafom:
+    <br>
+    <canvas id = "platno-1" width = "800" height = "100" style = "border: 1px dashed #099999"></canvas>
+
+    <script>
+        "use strict";
+
+        let can1, platno1;
+        
+        can1 = document.getElementById("platno-1");
+        platno1 = can1.getContext("2d");
+
+        let x = new Array();
+        let y = new Array();
+
+        let maxGrafX = can1.width;
+        let maxGrafY = can1.height;
+        let časovnik;
+
+        for(let i = 0; i < can1.width; i++){
+            x[i] = i;
+        }
+
+        platno1.strokeStyle = "#FF0000";
+
+        function zanka(){
+            if(y.length == maxGrafX + 1){
+                y.splice(0,1);
+                y.push(Math.random()*100);
+            }
+            else{
+                y.push(Math.random()*100);
+            }
+
+            platno1.clearRect(0,0, can1.width, can1.height);
+
+            platno1.beginPath();
+
+            for(let i = 0; i<y.length; i++){
+                platno1.lineTo(x[i], y[i]);
+            }
+
+            platno1.stroke();
+
+            časovnik = setTimeout(zanka, 10);
+        }
+
+        zanka();
+
+    </script>
+    
+</body>
+</html>

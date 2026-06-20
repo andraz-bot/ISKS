@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graf</title>
+</head>
+<body>
+    Primer z grafom:
+    <br>
+    <canvas id = "platno-1" width = "800" height = "100" style = "border: 1px dashed #099999"></canvas>
+    <br>
+    <canvas id = "platno-2" width = "800" height = "100" style = "border: 1px dashed #099999"></canvas>
+    <br>
+    <canvas id = "platno-3" width = "800" height = "100" style = "border: 1px dashed #099999"></canvas>
+
+    <script>
+        "use strict";
+
+        let časovnik;
+
+        let graf1;
+        let graf2;
+        let graf3;
+
+        class Graf {
+    constructor(idPlatna) {
+        // POPRAVEK: Uporabi argument idPlatna in pravilno referenco na this.can1
+        this.can1 = document.getElementById(idPlatna); 
+        this.platno1 = this.can1.getContext("2d"); // DODAN this. pred can1
+
+        this.x = new Array();
+        this.y = new Array();
+
+        this.maxGrafX = this.can1.width;
+        this.maxGrafY = this.can1.height;
+        this.platno1.strokeStyle = "#FF0000";
+
+        for (let i = 0; i < this.maxGrafX; i++) {
+            this.x[i] = i;
+        }
+    }
+
+    dodajVrednostAliBrišiInDodaj(yVrednost) {
+        // Če je polje polno, odstranimo prvi element (shift)
+        if (this.y.length >= this.maxGrafX) {
+            this.y.shift(); // shift() je boljše kot splice(0,1) za ta namen
+        }
+        this.y.push(yVrednost);
+    }
+
+    izriši(yVrednost) {
+        this.dodajVrednostAliBrišiInDodaj(yVrednost);
+
+        this.platno1.clearRect(0, 0, this.can1.width, this.can1.height);
+
+        this.platno1.beginPath();
+
+        for (let i = 0; i < this.y.length; i++) {
+            if (i === 0) {
+                this.platno1.moveTo(this.x[i], this.y[i]);
+            } else {
+                this.platno1.lineTo(this.x[i], this.y[i]);
+            }
+        }
+
+        this.platno1.stroke();
+    }
+}
+
+
+
+        function zanka(){
+            graf1.izriši(Math.random()*100);
+            graf2.izriši(Math.random()*100);
+            graf3.izriši(Math.random()*100);
+            časovnik = setTimeout(zanka, 10);
+        }
+
+        graf1 = new Graf("platno-1");
+        graf2 = new Graf("platno-2");
+        graf3 = new Graf("platno-3");
+
+        zanka();
+
+    </script>
+    
+</body>
+</html>

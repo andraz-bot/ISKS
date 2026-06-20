@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graf</title>
+</head>
+<body>
+    Primer z grafom:
+    <br>
+    <canvas id = "platno-1" width = "800" height = "100" style = "border: 1px dashed #099999"></canvas>
+
+    <script>
+        "use strict";
+
+        let can1, platno1;
+        
+        can1 = document.getElementById("platno-1");
+        platno1 = can1.getContext("2d");
+
+        let x = new Array();
+        let y = new Array();
+
+        x[0] = 10;
+        y[0] = 70;
+        x[1] = 110;
+        y[1] = 35;
+        x[2] = 210;
+        y[2] = 50;
+        x[3] = 310;
+        y[3] = 25;
+        x[4] = 410;
+        y[4] = 45;
+        x[5] = 510;
+        y[5] = 15;
+
+        platno1.strokeStyle = "#FF0000";
+        platno1.beginPath();
+
+        for(let i = 0; i<y.length; i++){
+            platno1.lineto(x[i],y[i]);
+        }
+
+        
+        platno1.stroke();
+
+    </script>
+    
+</body>
+</html>
