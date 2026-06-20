@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket</title>
+</head>
+<body>
+
+<button id="pošlji-JSON-sporočilo" onclick="pošljiJSONsporočilo()">pošljiJSONsporočilo</button>
+<p></p>
+Sporočilo: <input id="JSONsporočilo" size="50" value='{"tipSporočila": "LED", "pin": 2, "vrednost": 1}'>
+<br>
+
+<div id="izpis1">×</div>
+<div id="izpis2">×</div>
+<canvas id="platno-1" width="400" height="100" style="border: 1px dashed #099999"></canvas>
+
+<script>
+"use strict";
+
+let izpis1 = document.getElementById("izpis1"); // html element, v katerega bomo izpisovali sporočila, ki jih prejmemo iz node.js serverja preko WebSocket port 8888 povezave
+let izpis2 = document.getElementById("izpis2");
+
+let ws = new WebSocket("ws://192.168.1.198:8888"); // ustvarimo povezavo prek spletnega vtičnika WebSocket - povežemo se z node.js preko vrat oz. port-a 8888
+
+let graf1; // spremenljivka, ki predstavlja prvi graf (objekt razreda Graf)
+
+class Graf{
+    constructor(idPlatna){
+        // vrstici za delo s platnom, t.j. "canvas-om"
+        // "boileplate" koda za platno ("koda deklaracijske ploščice bojlerja")
+        this.can1 = document.getElementById(idPlatna); // pridobimo element platna iz HTML dokumenta
+        this.platno1 = this.can1.getContext("2d"); // pridobimo 2D kontekst za risanje na platnu, od tu dalje za risanje uporabimo spremenljivko "platno1"
+        this.platno1.strokeStyle = "#FF0000"; // nastavimo rdečo barvo črte RRGGBB
+        this.x = new Array(); // deklariramo novo tabelo x (polje oz. Array), lathko bi tudi zapisali: let x = [];
+        this.y = new Array(); // deklariramo novo tabelo y (polje oz. Array), lathko bi tudi zapisali: let y = [];
+        this.maxGrafX = this.can1.width; // maksimalna vrednost po abscisi
+        this.maxGrafY = this.can1.height; // maksimalna vrednost po ordinati
+        // inicializacija tabele x
+        for(let i=0; i<this.maxGrafX; i++){
+            this.x[i] = i; // za x zapišemo 0, 1, 2, ... t.j. vrednosti i do širine platna (800)
+        }
+    }
+    // funkcija najprej polni tabelo y z vrednostmi, ki jih posredujemo v argumentu
+    // ko je tabela y polna, prvo vrednost brišemo in na koncu tabele y novo vrednost dodamo
+    dodajVrednostAliBrišiIndodaj(yVrednost){
+        if(this.y.length == this.maxGrafX + 1){ // če je platno veliko 10x10 imamo 11x11 točk, zaradi tega +1
+            this.y.splice(0, 1); // na mestu 0 v tabeli y brišemo en (1) element
+            this.y.push(yVrednost); // na konec tabele y dodamo novo naključno vrednost med 0 in 100
+        }
+        else // če tabela y še ni polna, dodajamo naključne vrednosti
+        {
+            this.y.push(yVrednost); // na konec tabele y dodamo novo naključno vrednost med 0 in 100
+        }
+    }
+    izriši(yVrednost){
+        this.dodajVrednostAliBrišiIndodaj(yVrednost); // kličemo funkcijo, ki doda vrednost (ali briše in doda)
+        this.platno1.clearRect(0, 0, this.can1.width, this.can1.height); // počistimo platno (x, y, širina, višina)
+
+        this.platno1.beginPath(); // začetek izrisa
+
+        for(let i=0; i<this.y.length; i++){
+            this.platno1.lineTo(this.x[i], this.maxGrafY-this.y[i]/4095*this.maxGrafY); // vrednosti prikažemo na platnu (naključne med 0 in 100)
+        }
+
+        this.platno1.stroke(); // za prikaz črte na platnu
+    }
+}
+
+graf1 = new Graf("platno-1"); // ustvarimo nov graf, ki bo izrisan na platnu z id-jem "platno-1"
+
+ws.onmessage = function(event){ // funkcija, ki se izvede, ko prejme sporočilo iz node.js serverja preko WebSocket port 8888 povezave
+    let msg = JSON.parse(event.data); // string iz ws spravimo v JSON objekt
+    switch(msg.tipSporočila){ // glede na tip sporočila izvedemo ustrezen del kode
+        case "fotoupornik":
+            izpis1.innerHTML = msg.vrednost; // v primeru, da je tip sporočila "fotoupornik" izpišemo celotno sporočilo, ki smo ga prejeli iz node.js serverja, v html element z id-jem "izpis1"
+            izpis2.innerHTML = event.data; // izpišemo celotno sporočilo, ki smo ga prejeli iz node.js serverja, v html element z id-jem "izpis2"
+            graf1.izriši(msg.vrednost); // izrišemo graf, ki ga posodabljamo z vrednostjo, ki smo jo prejeli iz node.js serverja
+        break;
+    };
+};
+
+function pošljiJSONsporočilo(){ // ob pritisku na gumb izvedemo funkcijo pošljiJSONsporočilo
+    let JSONsporočilo = document.getElementById("JSONsporočilo").value; // string iz tekstnega "input" polja html vmesnika
+    ws.send(JSONsporočilo); // naše sporočilo "Test 456" pošljemo preko spletnega vtičnika ws port 8888
+}
+
+</script>
+
+</body>
+</html>
