@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <title>Touch Nadzor in Grafi</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background-color: #f4f4f9; }
+        h3 { color: #333; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; margin-bottom: 20px; }
+        canvas { display: block; margin: 10px 0; border: 2px solid #555; background-color: #fff; }
+    </style>
+</head>
+<body>
+
+    <h3>Nadzor grafov</h3>
+    <button onclick="posljiUkazZaTipko()">Dodaj/Izbriši Graf</button>
+    <div id="kontejner"></div> 
+
+    <script>
+        // --- SEGMENT: Inicializacija komunikacije ---
+        // Vzpostavimo WebSocket povezavo s strežnikom za dvosmerni prenos podatkov
+        let port = window.location.port || 80; 
+        let ws = new WebSocket("ws://" + window.location.hostname + ":" + port);
+        
+        let grafi = []; 
+        let stevec = 0; 
+        const barveGrafov = ["orange", "blue", "red"]; 
+
+        // --- SEGMENT: Objektni razred (Inženirski pristop) ---
+        // Vsak graf je objekt, ki sam skrbi za izris svojih podatkov na svoj canvas
+        class Graf {
+            constructor(id, barva) {
+                this.canvas = document.getElementById(id);
+                this.ctx = this.canvas.getContext("2d");
+                this.podatki = [];
+                this.barva = barva; 
+            }
+            
+            izrisi(val) {
+                this.podatki.push(val);
+                if (this.podatki.length > 50) this.podatki.shift(); 
+                
+                this.ctx.clearRect(0, 0, 300, 100);
+                this.ctx.beginPath();
+                this.ctx.strokeStyle = this.barva;
+                this.ctx.lineWidth = 2;
+                
+                let sirinaKoraka = 300 / (this.podatki.length - 1);
+                this.podatki.forEach((v, i) => {
+                    let y = 100 - v; 
+                    if (i === 0) this.ctx.moveTo(0, y);
+                    else this.ctx.lineTo(i * sirinaKoraka, y);
+                });
+                this.ctx.stroke();
+            }
+        }
+
+        // --- SEGMENT: Centralni procesor sporočil (Event Handler) ---
+        // Tukaj se določi, kaj narediti s prejetimi podatki od ESP32 ali UI
+        ws.onmessage = function(e) {
+            let d = JSON.parse(e.data);
+            
+            // 1. Logika za upravljanje strukture grafov (ukaz "klik")
+            if (d.ukaz === "klik") {
+                upravljajGraf();
+            } 
+            // 2. Logika za vizualizacijo telemetrije (podatki senzorja)
+            // Poišče objekt v seznamu 'grafi', ki ustreza ID-ju senzorja
+            else if (d.id !== undefined) {
+                let najden = grafi.find(x => x.id === d.id);
+                if (najden) najden.g.izrisi(d.val);
+            }
+        };
+
+        // --- SEGMENT: Interakcija z uporabnikom ---
+        function posljiUkazZaTipko() {
+            // Pošlje signal na strežnik, ki ga ta nato razpošlje vsem povezanim
+            ws.send(JSON.stringify({ukaz: "klik"}));
+        }
+
+        // --- SEGMENT: Dinamična gradnja vmesnika (DOM manipulation) ---
+        // Funkcija, ki gradi ali briše HTML elemente glede na stanje sistema
+        function upravljajGraf() {
+            if (stevec < 3) {
+                // Ustvari nov canvas element in ga doda v kontejner
+                let canvas = document.createElement("canvas");
+                canvas.id = "graf" + stevec;
+                canvas.width = 300;
+                canvas.height = 100;
+                document.getElementById("kontejner").appendChild(canvas);
+                
+                // Ustvari nov objekt Graf in ga poveže z novim canvasom
+                grafi.push({id: stevec, g: new Graf(canvas.id, barveGrafov[stevec])});
+                stevec++;
+            } else {
+                // Resetira sistem: izbriše HTML vsebino in ponastavi objekte
+                document.getElementById("kontejner").innerHTML = "";
+                grafi = [];
+                stevec = 0;
+            }
+        }
+    </script>
+</body>
+</html>

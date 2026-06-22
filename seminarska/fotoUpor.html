@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nadzor LED sistema</title>
+    <style>
+        /*alarm*/
+        body { font-family: sans-serif; padding: 20px; }
+        #statusSistema { padding: 15px; border-radius: 5px; font-weight: bold; margin: 10px 0; border: 1px solid #ccc; }
+        .ok { color: green; background-color: #e8f5e9; }
+        .alarm { color: red; background-color: #ffebee; }
+    </style>
+</head>
+<body>
+
+<h3>Nadzor LED sistema</h3>
+<button onclick="nastaviUkaz(1)">VKLOP (1)</button>
+<button onclick="nastaviUkaz(0)">IZKLOP (0)</button>
+
+<div id="statusSistema">STANJE: Povezovanje...</div>
+<p>Vrednost fotoupornika: <b id="izpis1">×</b></p>
+<canvas id="platno-1" width="400" height="100" style="border: 1px dashed #099999"></canvas>
+
+<script>
+"use strict";
+
+//Inicializacija povezav in globalnih spremenljivk
+let statusSistema = document.getElementById("statusSistema");
+let izpis1 = document.getElementById("izpis1");
+let ws = new WebSocket("ws://172.20.10.5:8888"); 
+let trenutnaZelja = 0; 
+
+//Objektni razred za izris grafov na Canvas
+class Graf {
+    constructor(idPlatna){
+        this.can1 = document.getElementById(idPlatna); 
+        this.platno1 = this.can1.getContext("2d"); 
+        this.platno1.strokeStyle = "#FF0000"; 
+        this.y = []; 
+        this.maxGrafX = this.can1.width;
+    }
+    izriši(yVrednost){
+        if(this.y.length > this.maxGrafX) this.y.shift();
+        this.y.push(yVrednost);
+        this.platno1.clearRect(0, 0, this.can1.width, this.can1.height); 
+        this.platno1.beginPath(); 
+        for(let i=0; i<this.y.length; i++){
+            this.platno1.lineTo(i, 100 - (this.y[i] / 4095 * 100)); 
+        }
+        this.platno1.stroke(); 
+    }
+}
+let graf1 = new Graf("platno-1");
+
+//WebSocket dogodki (Povezava in sprejem podatkov)
+ws.onopen = function() { statusSistema.innerHTML = "STANJE: Povezano"; };
+
+//Glavna logika za obdelavo telemetrije in diagnostiko napak
+ws.onmessage = function(event){ 
+    let msg = JSON.parse(event.data); 
+    
+    if(msg.tipSporočila === "fotoupornik"){
+        izpis1.innerHTML = msg.vrednost;
+        graf1.izriši(msg.vrednost);
+
+        // Diagnostična logika (zaprta zanka): Primerjava želje uporabnika z dejanskim stanjem
+        let dejanskoSvetlo = (msg.vrednost > 500) ? 1 : 0; 
+
+        if (trenutnaZelja === 1 && dejanskoSvetlo === 0) {
+            statusSistema.innerHTML = "ALARM: GLAVNA LED NE DELA!";
+            statusSistema.className = "alarm";
+        } else if (trenutnaZelja === 1 && dejanskoSvetlo === 1) {
+            statusSistema.innerHTML = "STANJE: OK (Sveti pravilno)";
+            statusSistema.className = "ok";
+        } else {
+            statusSistema.innerHTML = "STANJE: Sistem ugasnjen";
+            statusSistema.className = "";
+        }
+    }
+};
+
+//Funkcija za pošiljanje ukazov strežniku
+function nastaviUkaz(stanje) {
+    trenutnaZelja = stanje;
+    let ukaz = JSON.stringify({"tipSporočila": "LED", "vrednost": stanje});
+    ws.send(ukaz);
+}
+</script>
+</body>
+</html>

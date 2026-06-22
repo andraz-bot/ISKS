@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <title>Nadzor potenciometra</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        /* Canvas je naše "platno" za risanje grafov v realnem času */
+        canvas { border: 2px solid #000; background-color: #fff; display: block; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <h2>Sistem: Potenciometer</h2>
+    <h3 id="status">Status: --</h3>
+    
+    <canvas id="grafCanvas" width="400" height="200"></canvas>
+    <h3 id="vrednost">Vrednost: --</h3>
+
+    <script>
+        const canvas = document.getElementById("grafCanvas");
+        const ctx = canvas.getContext("2d"); // Kontext 2D nam omogoča risanje oblik in črt
+        
+        // Povezava na WebSocket strežnik na istem gostitelju in portu 8080
+        const ws = new WebSocket("ws://" + window.location.hostname + ":8080");
+
+        // Funkcija se sproži vsakič, ko ESP32 pošlje nov podatek
+        ws.onmessage = function(event) {
+            const d = JSON.parse(event.data); // Prevedemo prejeto besedilo v JavaScript objekt
+            if (d.val !== undefined) {
+                const val = d.val;
+                
+                // 1. LOGIČNA PLAST: Določanje stanja sistema
+                // Primerjamo odčitano vrednost s pragovi (1948 - 2148)
+                let barva = (val < 1948) ? "blue" : (val > 2148) ? "red" : "green";
+                let status = (val < 1948) ? "prenizko" : (val > 2148) ? "previsoko" : "v redu";
+                
+                // Posodobitev besedila v HTML-ju
+                document.getElementById("status").innerText = "Status: " + status;
+                document.getElementById("vrednost").innerText = "Vrednost: " + val;
+
+                // 2. VIZUALNA PLAST (Canvas): Risanje vmesnika
+                ctx.clearRect(0, 0, canvas.width, canvas.height); // Očistimo platno pred novim risanjem
+
+                // Kvadratek indikatorja: prikazuje barvno stanje (rdeča/zelena/modra)
+                ctx.fillStyle = barva;
+                ctx.fillRect(10, 10, 40, 40);
+
+                // Referenčna črta (rdeča): Predstavlja želeno točko (setpoint)
+                ctx.strokeStyle = "red";
+                ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.moveTo(0, 100); ctx.lineTo(400, 100); ctx.stroke();
+
+                // Dinamična črta (zelena): Predstavlja trenutno vrednost potenciometra
+                // MATEMATIČNO SKALIRANJE: Vrednost potenciometra (val) delimo z 20, 
+                // da 4096 enot "stisnemo" v 200 pik višine platna (200 - (val/20))
+                ctx.strokeStyle = "green";
+                ctx.beginPath(); 
+                ctx.moveTo(0, 200 - (val / 20)); 
+                ctx.lineTo(400, 200 - (val / 20)); 
+                ctx.stroke();
+            }
+        };
+    </script>
+</body>
+</html>
